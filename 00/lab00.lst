@@ -1,0 +1,21 @@
+     1                                  ;[map all lab00.map]
+     2                                  SECTION .data
+     3 00000000 0A141E28                	SOURCE: db 10,20,30,40; INITIAL ARRAY
+     4                                  SECTION .bss
+     5 00000000 <res 00000004>          	TARGET: resb 4; FREE SPACE TO MOVE BYTES FROM SOURCE
+     6                                  SECTION .text
+     7                                  	GLOBAL _start
+     8                                  
+     9                                  _start:
+    10 00000000 A0[00000000]            	mov al,[SOURCE]
+    11 00000005 A2[03000000]            	mov [TARGET+3],al
+    12 0000000A A0[01000000]            	mov al,[SOURCE+1]
+    13 0000000F A2[02000000]            	mov [TARGET+2],al
+    14 00000014 A0[02000000]            	mov al,[SOURCE+2]
+    15 00000019 A2[01000000]            	mov [TARGET+1],al
+    16 0000001E A0[03000000]            	mov al,[SOURCE+3]
+    17 00000023 A2[00000000]            	mov [TARGET],al
+    18                                  	;exit programm
+    19 00000028 66B80100                	mov ax,1
+    20 0000002C 66BB0100                	mov bx,1
+    21 00000030 CD80                    	int 0x80;sys_call

@@ -1,0 +1,150 @@
+     1                                  %define check_overflow jo report_overflow
+     2                                  %define stdout 0x1
+     3                                  %define sys_write 0x4
+     4                                  %define stdin 0x2
+     5                                  %define sys_read 0x3
+     6                                  SECTION .data
+     7 00000000 6F766572666C6F7720-     	overflow_mes db 'overflow occured during program runtime. Please, invent exceptions to handle this properly',10,13
+     8 00000009 6F6363757265642064-
+     9 00000012 7572696E672070726F-
+    10 0000001B 6772616D2072756E74-
+    11 00000024 696D652E20506C6561-
+    12 0000002D 73652C20696E76656E-
+    13 00000036 742065786365707469-
+    14 0000003F 6F6E7320746F206861-
+    15 00000048 6E646C652074686973-
+    16 00000051 2070726F7065726C79-
+    17 0000005A 0A0D               
+    18                                  	len equ $ - overflow_mes
+    19 0000005C 506C656173652C2065-     	input_mes db 'Please, enter a signed byte(or else you will break something)',10,13
+    20 00000065 6E7465722061207369-
+    21 0000006E 676E65642062797465-
+    22 00000077 286F7220656C736520-
+    23 00000080 796F752077696C6C20-
+    24 00000089 627265616B20736F6D-
+    25 00000092 657468696E67290A0D 
+    26                                  	leni equ $ - input_mes
+    27 0000009B 496E74656765722070-     	int_mes db 'Integer part:'
+    28 000000A4 6172743A           
+    29                                  	int_mesl equ  $ - int_mes
+    30 000000A8 0A0D52656D696E6465-     	rem_mes db  10,13,'Reminder part:'
+    31 000000B1 7220706172743A     
+    32                                  	rem_mesl equ  $ - rem_mes
+    33                                  
+    34                                  SECTION .text
+    35                                  
+    36                                  EXTERN read_num, print_num
+    37                                  GLOBAL _start
+    38                                  
+    39                                  _start:
+    40 00000000 B804000000              	mov eax, sys_write
+    41 00000005 BB01000000              	mov ebx, stdout
+    42 0000000A B9[5C000000]            	mov ecx, input_mes
+    43 0000000F BA3F000000              	mov edx, leni
+    44 00000014 CD80                    	int 80h
+    45 00000016 E8(00000000)            	call read_num
+    46 0000001B 6650                    	push ax
+    47 0000001D E800000000              	call cmp_num; no ret, it will destroy programm
+    48                                  
+    49                                  cmp_num:   ;expects short(16bit, signed)
+    50 00000022 55                      	push ebp
+    51 00000023 89E5                    	mov ebp, esp
+    52                                  	
+    53 00000025 668B4508                	mov ax, [ebp + 8]
+    54 00000029 6683F801                	cmp ax, 0x1
+    55 0000002D 7E08                    	jle le_one
+    56 0000002F 6683F814                	cmp ax, 0x14
+    57 00000033 7E37                    	jle le_twenty
+    58 00000035 EB5B                    	jmp gt_twenty
+    59                                  
+    60                                  le_one:
+    61 00000037 668B4508                	mov ax, [ebp+8]
+    62 0000003B 66F7E8                  	imul ax
+    63 0000003E 707F                    	check_overflow
+    64 00000040 66BB4B00                	mov bx, 75
+    65 00000044 66F7E3                  	mul bx
+    66 00000047 7076                    	check_overflow
+    67 00000049 6650                    	push ax;75 * x^2
+    68 0000004B 668B4508                	mov ax,[ebp+8]
+    69 0000004F 66BB1100                	mov bx, 17
+    70 00000053 66F7EB                  	imul bx 
+    71 00000056 6689C3                  	mov bx,ax; 17x
+    72 00000059 6658                    	pop ax
+    73 0000005B 6629D8                  	sub ax,bx
+    74 0000005E 705F                    	check_overflow
+    75                                  
+    76 00000060 6650                    	push ax
+    77 00000062 E8(00000000)            	call print_num
+    78 00000067 83C404                  	add esp,4
+    79 0000006A EB4C                    	jmp finally
+    80                                  
+    81                                  le_twenty:
+    82 0000006C 668B4508                	mov ax, [ebp+8]
+    83 00000070 66F7E0                  	mul ax
+    84 00000073 704A                    	check_overflow
+    85                                  	;x^2
+    86 00000075 6683C036                	add ax, 54
+    87 00000079 668B5D08                	mov bx,[ebp + 8]
+    88 0000007D 6643                    	inc bx
+    89                                  	;1 + x
+    90 0000007F 66F7F3                  	div bx
+    91 00000082 703B                    	check_overflow
+    92                                  
+    93 00000084 6650                    	push ax
+    94 00000086 6652                    	push dx
+    95 00000088 E84F000000              	call print_division_res
+    96 0000008D 83C408                  	add esp, 8
+    97 00000090 EB26                    	jmp finally
+    98                                  
+    99                                  gt_twenty: 
+   100 00000092 668B4508                	mov ax, [ebp + 8]
+   101 00000096 66BB5500                	mov bx, 85
+   102 0000009A 66F7E3                  	mul bx
+   103 0000009D 7020                    	check_overflow
+   104 0000009F 668B5D08                	mov bx,[ebp + 8]
+   105 000000A3 6643                    	inc bx
+   106 000000A5 66F7F3                  	div bx
+   107 000000A8 7015                    	check_overflow
+   108 000000AA 6650                    	push ax
+   109 000000AC 6652                    	push dx
+   110 000000AE E829000000              	call print_division_res
+   111 000000B3 83C408                  	add esp, 8
+   112 000000B6 EB00                    	jmp finally
+   113                                  finally:
+   114 000000B8 B801000000              	mov eax,1
+   115 000000BD CD80                    	int 80h
+   116                                  
+   117                                  report_overflow:
+   118 000000BF B804000000              	mov eax, sys_write
+   119 000000C4 BB01000000              	mov ebx, stdout
+   120 000000C9 B9[00000000]            	mov ecx, overflow_mes
+   121 000000CE BA5C000000              	mov edx, len
+   122 000000D3 CD80                    	int 80h
+   123 000000D5 B801000000              	mov eax, 0x1
+   124 000000DA CD80                    	int 80h
+   125                                  
+   126                                  print_division_res:
+   127 000000DC 55                      	push ebp
+   128 000000DD 89E5                    	mov ebp,esp
+   129                                  
+   130 000000DF 66B80400                	mov ax, sys_write
+   131 000000E3 66BB0100                	mov bx, stdout
+   132 000000E7 B9[9B000000]            	mov ecx, int_mes
+   133 000000EC 66BA0D00                	mov dx, int_mesl
+   134 000000F0 CD80                    	int 80h
+   135 000000F2 668B450A                	mov ax, [ebp + 10]
+   136 000000F6 6650                    	push ax
+   137 000000F8 E8(00000000)            	call print_num
+   138 000000FD 66B80400                	mov ax,sys_write
+   139 00000101 B9[A8000000]            	mov ecx, rem_mes
+   140 00000106 66BA1000                	mov dx, rem_mesl
+   141 0000010A CD80                    	int 80h
+   142 0000010C 83C404                  	add esp,4
+   143 0000010F 668B4508                	mov ax, [ebp + 8]
+   144 00000113 6650                    	push ax
+   145 00000115 E8(00000000)            	call print_num
+   146 0000011A 83C404                  	add esp,4
+   147                                  
+   148 0000011D 89EC                    	mov esp,ebp
+   149 0000011F 5D                      	pop ebp
+   150 00000120 C3                      	ret

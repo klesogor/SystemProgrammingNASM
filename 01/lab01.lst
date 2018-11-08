@@ -1,0 +1,166 @@
+     1                                  
+     2                                  section     .data
+     3                                  	sys_write equ 4h
+     4                                  	sys_read  equ 3h
+     5                                  	std_in    equ 2h
+     6                                  	std_out   equ 1h
+     7                                  	max_chars equ 5h
+     8 00000000 4E6F7420612076616C-     	msg  db 'Not a valid character or too big/small number ', 0xa
+     9 00000009 696420636861726163-
+    10 00000012 746572206F7220746F-
+    11 0000001B 6F206269672F736D61-
+    12 00000024 6C6C206E756D626572-
+    13 0000002D 200A               
+    14                                  	len equ $-msg
+    15 0000002F 456E746572206E756D-     	input db 'Enter number',10,13
+    16 00000038 6265720A0D         
+    17                                  	il equ $ - input
+    18                                  
+    19                                  section	    .bss
+    20 00000000 <res 00000040>          	buffer resb 64
+    21                                  
+    22                                  
+    23                                  section     .text
+    24                                  
+    25                                  global      _start                              ;must be declared for linker (ld)
+    26                                  
+    27                                  _start:
+    28 00000000 B804000000              	mov eax, sys_write
+    29 00000005 BB01000000              	mov ebx, std_out
+    30 0000000A B9[2F000000]            	mov ecx, input
+    31 0000000F BA0E000000              	mov edx, il
+    32 00000014 CD80                    	int 80h
+    33 00000016 E87D000000              	call read_num
+    34 0000001B 6650                    	push ax
+    35 0000001D E809000000              	call print_num
+    36 00000022 83EC04                  	sub esp,4 ;clear stack
+    37 00000025 66B80100                	mov ax,1
+    38 00000029 CD80                    	int 80h
+    39                                  
+    40                                  print_num:;expects number on stack
+    41 0000002B 55                      	push ebp; save base pointer
+    42 0000002C 89E5                    	mov ebp,esp; point to start of stack
+    43                                  	res_sign:
+    44 0000002E 668B4508                	mov ax, word [ebp+8]; ebp+ret address
+    45 00000032 6609C0                  	or ax,ax
+    46 00000035 792D                    	jns init_ns
+    47 00000037 66B82D00                	mov ax, '-';print minus sign
+    48 0000003B 66A3[00000000]          	mov [buffer], ax
+    49 00000041 B804000000              	mov eax, sys_write
+    50 00000046 BB01000000              	mov ebx, std_out
+    51 0000004B B9[00000000]            	mov ecx, buffer
+    52 00000050 BA01000000              	mov edx, 1
+    53 00000055 CD80                    	int 80h
+    54 00000057 668B4508                	mov ax, [ebp+8];invert value
+    55 0000005B 66F7D8                  	neg ax
+    56 0000005E 66894508                	mov [ebp+8], ax
+    57 00000062 EB04                    	jmp init_s
+    58                                  	
+    59                                  	init_ns:
+    60 00000064 668B4508                	mov ax, [ebp+8]
+    61                                  
+    62                                  	init_s:
+    63 00000068 66BB0A00                	mov bx, 10
+    64 0000006C 66BA0000                	mov dx, 0
+    65                                  
+    66                                  	divide_loop:
+    67 00000070 6683C202                	add dx,2;increment counter by two, since two bytes will be reserved on stack
+    68 00000074 F6F3                    	div bl
+    69 00000076 6631C9                  	xor cx, cx
+    70 00000079 88E1                    	mov cl,ah
+    71 0000007B 6683C130                	add cx, '0'
+    72 0000007F 6651                    	push cx
+    73 00000081 30E4                    	xor ah,ah
+    74 00000083 6685C0                  	test ax,ax
+    75 00000086 75E8                    	jnz divide_loop
+    76                                  	
+    77                                  	print_res:
+    78 00000088 66B80400                	mov ax, sys_write
+    79 0000008C 66BB0100                	mov bx, std_out
+    80 00000090 89E1                    	mov ecx, esp; counter is already in dx
+    81 00000092 CD80                    	int 80h
+    82                                  
+    83 00000094 89EC                    	mov esp,ebp;restore stack and return
+    84 00000096 5D                      	pop ebp
+    85 00000097 C3                      	ret
+    86                                  
+    87                                  read_num:
+    88 00000098 55                      	push ebp
+    89 00000099 89E5                    	mov ebp,esp
+    90                                  
+    91 0000009B B803000000              	mov eax, sys_read
+    92 000000A0 BB02000000              	mov ebx, std_in
+    93 000000A5 B9[00000000]            	mov ecx, buffer
+    94 000000AA BA05000000              	mov edx, max_chars
+    95 000000AF CD80                    	int 80h
+    96 000000B1 B9[00000000]            	mov ecx, buffer; pointer
+    97                                  
+    98                                  	check_first_symbol:
+    99 000000B6 A0[00000000]            	mov al,[buffer]
+   100 000000BB 6683F82D                	cmp ax, '-'
+   101 000000BF 740E                    	je resolve_minus
+   102 000000C1 66B80000                	mov ax,0
+   103 000000C5 6650                    	push ax
+   104 000000C7 6683F82B                	cmp ax, '+'
+   105 000000CB 740B                    	je resolve_plus
+   106 000000CD EB0C                    	jmp preprocess_integer
+   107                                  
+   108                                  	resolve_minus:
+   109 000000CF 66B80100                	mov ax,1
+   110 000000D3 6650                    	push ax
+   111 000000D5 41                      	inc ecx
+   112 000000D6 EB03                    	jmp preprocess_integer
+   113                                  
+   114                                  	resolve_plus:
+   115 000000D8 41                      	inc ecx
+   116 000000D9 EB00                    	jmp preprocess_integer
+   117                                  
+   118                                  	preprocess_integer:
+   119 000000DB B30A                    	mov bl,10; set first nul
+   120 000000DD 666A00                  	push word 0; push empty value
+   121                                  	process_integer:
+   122 000000E0 8A01                    	mov al, [ecx]
+   123 000000E2 6683E830                	sub ax, '0'
+   124                                  	validate_num:
+   125 000000E6 7826                    	js bad; if ax<0 - error
+   126 000000E8 66BA0900                	mov dx, 9
+   127 000000EC 6629C2                  	sub dx, ax
+   128 000000EF 781D                    	js bad
+   129                                  	good:
+   130 000000F1 6689C2                  	mov dx,ax
+   131 000000F4 6658                    	pop ax
+   132 000000F6 F6E3                    	mul bl
+   133 000000F8 7014                    	jo bad
+   134 000000FA 6601D0                  	add ax,dx
+   135 000000FD 700F                    	jo bad; if overflow - it's time to leave
+   136 000000FF 6650                    	push ax
+   137 00000101 41                      	inc ecx
+   138 00000102 80390A                  	cmp [ecx],byte 0xa 
+   139 00000105 7421                    	je finish
+   140 00000107 803900                  	cmp [ecx], byte  0x0
+   141 0000010A 741C                    	je finish
+   142 0000010C EBD2                    	jmp process_integer
+   143                                  
+   144                                  	bad:
+   145 0000010E 66B80400                	mov ax,sys_write
+   146 00000112 66BB0100                	mov bx,std_out
+   147 00000116 B9[00000000]            	mov ecx, msg
+   148 0000011B 66BA2F00                	mov dx,len
+   149 0000011F CD80                    	int 80h
+   150 00000121 B801000000              	mov eax,1
+   151 00000126 CD80                    	int 80h
+   152                                  
+   153                                  	finish:
+   154 00000128 6658                    	pop ax
+   155 0000012A 665B                    	pop bx
+   156 0000012C 6683FB01                	cmp bx,1
+   157 00000130 7503                    	jne return
+   158 00000132 66F7D8                  	neg ax
+   159                                  
+   160                                  	return:
+   161 00000135 89EC                    	mov esp, ebp
+   162 00000137 5D                      	pop ebp
+   163 00000138 C3                      	ret
+   164                                  
+   165                                  
+   166                                  

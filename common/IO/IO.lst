@@ -1,0 +1,150 @@
+     1                                  
+     2                                  section     .data
+     3                                  	sys_write equ 4h
+     4                                  	sys_read  equ 3h
+     5                                  	std_in    equ 2h
+     6                                  	std_out   equ 1h
+     7                                  	max_chars equ 5h
+     8 00000000 79FF                    	num dw -135
+     9 00000002 4E6F7420612076616C-     	msg  db 'Not a valid character or too big/small number ', 0xa
+    10 0000000B 696420636861726163-
+    11 00000014 746572206F7220746F-
+    12 0000001D 6F206269672F736D61-
+    13 00000026 6C6C206E756D626572-
+    14 0000002F 200A               
+    15                                  	len equ $-msg
+    16                                  
+    17                                  section	    .bss
+    18 00000000 <res 00000040>          	buffer resb 64
+    19                                  
+    20                                  
+    21                                  section     .text
+    22                                  
+    23                                  global print_num:function, read_num:function      ;must be declared for linker 
+    24                                  
+    25                                  print_num:;expects number on stack
+    26 00000000 55                      	push ebp; save base pointer
+    27 00000001 89E5                    	mov ebp,esp; point to start of stack
+    28                                  	res_sign:
+    29 00000003 668B4508                	mov ax, word [ebp+8]; ebp+ret address
+    30 00000007 6609C0                  	or ax,ax
+    31 0000000A 792D                    	jns init_ns
+    32 0000000C 66B82D00                	mov ax, '-';print minus sign
+    33 00000010 66A3[00000000]          	mov [buffer], ax
+    34 00000016 B804000000              	mov eax, sys_write
+    35 0000001B BB01000000              	mov ebx, std_out
+    36 00000020 B9[00000000]            	mov ecx, buffer
+    37 00000025 BA01000000              	mov edx, 1
+    38 0000002A CD80                    	int 80h
+    39 0000002C 668B4508                	mov ax, [ebp+8];invert value
+    40 00000030 66F7D8                  	neg ax
+    41 00000033 66894508                	mov [ebp+8], ax
+    42 00000037 EB04                    	jmp init_s
+    43                                  	
+    44                                  	init_ns:
+    45 00000039 668B4508                	mov ax, [ebp+8]
+    46                                  
+    47                                  	init_s:
+    48 0000003D 66BB0A00                	mov bx, 10
+    49 00000041 66BA0000                	mov dx, 0
+    50                                  
+    51                                  	divide_loop:
+    52 00000045 6683C202                	add dx,2;increment counter by two, since two bytes will be reserved on stack
+    53 00000049 F6F3                    	div bl
+    54 0000004B 6631C9                  	xor cx, cx
+    55 0000004E 88E1                    	mov cl,ah
+    56 00000050 6683C130                	add cx, '0'
+    57 00000054 6651                    	push cx
+    58 00000056 30E4                    	xor ah,ah
+    59 00000058 6685C0                  	test ax,ax
+    60 0000005B 75E8                    	jnz divide_loop
+    61                                  	
+    62                                  	print_res:
+    63 0000005D 66B80400                	mov ax, sys_write
+    64 00000061 66BB0100                	mov bx, std_out
+    65 00000065 89E1                    	mov ecx, esp; counter is already in dx
+    66 00000067 CD80                    	int 80h
+    67                                  
+    68 00000069 89EC                    	mov esp,ebp;restore stack and return
+    69 0000006B 5D                      	pop ebp
+    70 0000006C C3                      	ret
+    71                                  
+    72                                  read_num:
+    73 0000006D 55                      	push ebp
+    74 0000006E 89E5                    	mov ebp,esp
+    75                                  
+    76 00000070 B803000000              	mov eax, sys_read
+    77 00000075 BB02000000              	mov ebx, std_in
+    78 0000007A B9[00000000]            	mov ecx, buffer
+    79 0000007F BA05000000              	mov edx, max_chars
+    80 00000084 CD80                    	int 80h
+    81 00000086 B9[00000000]            	mov ecx, buffer; pointer
+    82                                  
+    83                                  	check_first_symbol:
+    84 0000008B A0[00000000]            	mov al,[buffer]
+    85 00000090 6683F82D                	cmp ax, '-'
+    86 00000094 7408                    	je resolve_minus
+    87 00000096 6683F82B                	cmp ax, '+'
+    88 0000009A 740B                    	je resolve_plus
+    89 0000009C EB12                    	jmp preprocess_integer
+    90                                  
+    91                                  	resolve_minus:
+    92 0000009E 66B80100                	mov ax,1
+    93 000000A2 6650                    	push ax
+    94 000000A4 41                      	inc ecx
+    95 000000A5 EB09                    	jmp preprocess_integer
+    96                                  
+    97                                  	resolve_plus:
+    98 000000A7 66B80000                	mov ax,0
+    99 000000AB 6650                    	push ax
+   100 000000AD 41                      	inc ecx
+   101 000000AE EB00                    	jmp preprocess_integer
+   102                                  
+   103                                  	preprocess_integer:
+   104 000000B0 B30A                    	mov bl,10; set first nul
+   105 000000B2 666A00                  	push word 0; push empty value
+   106                                  	process_integer:
+   107 000000B5 8A01                    	mov al, [ecx]
+   108 000000B7 6683E830                	sub ax, '0'
+   109                                  	validate_num:
+   110 000000BB 7224                    	jc bad; if ax<0 - error
+   111 000000BD 66BA0900                	mov dx, 9
+   112 000000C1 6629C2                  	sub dx, ax
+   113 000000C4 721B                    	jc bad
+   114                                  	good:
+   115 000000C6 6689C2                  	mov dx,ax
+   116 000000C9 6658                    	pop ax
+   117 000000CB F6E3                    	mul bl
+   118 000000CD 6601D0                  	add ax,dx
+   119 000000D0 700F                    	jo bad; if overflow - it's time to leave
+   120 000000D2 6650                    	push ax
+   121 000000D4 41                      	inc ecx
+   122 000000D5 80390A                  	cmp [ecx],byte 0xa 
+   123 000000D8 7421                    	je finish
+   124 000000DA 803900                  	cmp [ecx], byte  0x0
+   125 000000DD 741C                    	je finish
+   126 000000DF EBD4                    	jmp process_integer
+   127                                  
+   128                                  	bad:
+   129 000000E1 66B80400                	mov ax,sys_write
+   130 000000E5 66BB0100                	mov bx,std_out
+   131 000000E9 B9[02000000]            	mov ecx, msg
+   132 000000EE 66BA2F00                	mov dx,len
+   133 000000F2 CD80                    	int 80h
+   134 000000F4 B801000000              	mov eax,1
+   135 000000F9 CD80                    	int 80h
+   136                                  
+   137                                  	finish:
+   138 000000FB 6658                    	pop ax
+   139 000000FD 665B                    	pop bx
+   140 000000FF 6683FB01                	cmp bx,1
+   141 00000103 7503                    	jne return
+   142 00000105 66F7D8                  	neg ax
+   143                                  
+   144                                  	return:
+   145 00000108 89EC                    	mov esp, ebp
+   146 0000010A 5D                      	pop ebp
+   147 0000010B C3                      	ret
+   148                                  
+   149                                  
+   150                                  

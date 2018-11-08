@@ -1,0 +1,88 @@
+     1                                  %define SIZE 20
+     2                                  %macro CHECK_INPUT_VALID_INTEGER 0% 
+     3                                      cmp eax,1
+     4                                      jne invalid_integer_input
+     5                                  %endmacro%
+     6                                  section .data
+     7 00000000 456E74657220617272-         in_mes_size    db "Enter array size in range 1 to 20", 10,0
+     8 00000009 61792073697A652069-
+     9 00000012 6E2072616E67652031-
+    10 0000001B 20746F2032300A00   
+    11 00000023 496E76616C69642061-         size_error_mes db "Invalid array size",10,0
+    12 0000002C 727261792073697A65-
+    13 00000035 0A00               
+    14 00000037 496E76616C69642063-         parse_error    db "Invalid character found", 10, 0
+    15 00000040 686172616374657220-
+    16 00000049 666F756E640A00     
+    17 00000050 456E746572206E6578-         in_mes_digit   db "Enter next digit:",10,0
+    18 00000059 742064696769743A0A-
+    19 00000062 00                 
+    20 00000063 256400                      in_format      db "%d",0
+    21                                  section .bss
+    22 00000000 <res 00000028>              array      resw SIZE 
+    23 00000028 <res 00000002>              array_size resw 1
+    24 0000002A <res 00000002>              temp_var   resw 1
+    25                                  section .text 
+    26                                  
+    27                                  extern printf,scanf
+    28                                  global read_array, invalid_integer_input,main
+    29                                  
+    30                                  main:
+    31 00000000 E807000000                  call read_array;
+    32 00000005 B801000000                  mov eax, 1
+    33 0000000A CD80                        int 80h
+    34                                  
+    35                                  read_array:
+    36                                  ;print input message
+    37 0000000C 68[00000000]            push in_mes_size
+    38 00000011 E8(00000000)            call printf
+    39 00000016 83C404                  add esp,4
+    40                                  ;read array size
+    41 00000019 68[28000000]            push array_size
+    42 0000001E 68[63000000]            push in_format
+    43 00000023 E8(00000000)            call scanf
+    44 00000028 83C408                  add esp,8
+    45                                  CHECK_INPUT_VALID_INTEGER
+    46 0000002B 83F801              <1>  cmp eax,1
+    47 0000002E 755B                <1>  jne invalid_integer_input
+    48                                  
+    49                                  ; check array size
+    50 00000030 A1[28000000]            mov eax, [array_size]
+    51 00000035 83F800                  cmp eax, 0
+    52 00000038 7E3D                    jle invalid_array_size
+    53 0000003A 83F814                  cmp eax, SIZE
+    54 0000003D 7F38                    jg  invalid_array_size
+    55 0000003F 8B35[28000000]          mov esi, [array_size];C library doesn't affects this register
+    56 00000045 BF[00000000]            mov edi, array;pointer to array
+    57 0000004A 68[50000000]            push in_mes_digit
+    58                                  
+    59                                  parse_next_int:;I could play with esp value to not push and pop values from stack, but its complicate
+    60 0000004F E8(00000000)            call printf
+    61 00000054 68[2A000000]            push temp_var
+    62 00000059 68[63000000]            push in_format
+    63 0000005E E8(00000000)            call scanf
+    64 00000063 83C408                  add esp,8
+    65 00000066 A1[2A000000]            mov eax, [temp_var]
+    66 0000006B 8907                    mov [edi], eax
+    67 0000006D 83C704                  add edi, 4;add dword to pointer
+    68 00000070 4E                      dec esi
+    69 00000071 75DC                    jnz parse_next_int;
+    70                                  
+    71                                  finalize:
+    72 00000073 83C404                  add esp,4
+    73 00000076 C3                      ret
+    74                                  
+    75                                  
+    76                                  invalid_array_size:
+    77 00000077 68[23000000]            push size_error_mes
+    78 0000007C E8(00000000)            call printf
+    79 00000081 83C404                  add esp,4
+    80 00000084 B801000000              mov eax,1
+    81 00000089 CD80                    int 80h
+    82                                  
+    83                                  invalid_integer_input:
+    84 0000008B 68[37000000]            push parse_error
+    85 00000090 E8(00000000)            call printf
+    86 00000095 83C404                  add esp,4
+    87 00000098 B801000000              mov eax,1
+    88 0000009D CD80                    int 80h

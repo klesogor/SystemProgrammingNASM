@@ -1,0 +1,131 @@
+     1                                  %define SIZE 20
+     2                                  %macro CHECK_INPUT_VALID_INTEGER 1
+     3                                      cmp eax,%1
+     4                                      jne invalid_integer_input
+     5                                  %endmacro
+     6                                  
+     7                                  
+     8                                  extern printf,scanf
+     9                                  global print_array, read_array, invalid_integer_input, array, array_size, read_2d_array, array_2d_size
+    10                                  
+    11                                  section .data
+    12 00000000 456E74657220617272-         in_mes_size    db "Enter array size in range 1 to 20", 10,0
+    13 00000009 61792073697A652069-
+    14 00000012 6E2072616E67652031-
+    15 0000001B 20746F2032300A00   
+    16 00000023 496E76616C69642061-         size_error_mes db "Invalid array size",10,0
+    17 0000002C 727261792073697A65-
+    18 00000035 0A00               
+    19 00000037 496E76616C69642063-         parse_error    db "Invalid character found", 10, 0
+    20 00000040 686172616374657220-
+    21 00000049 666F756E640A00     
+    22 00000050 456E746572206E6578-         in_mes_digit   db "Enter next digit:",10,0
+    23 00000059 742064696769743A0A-
+    24 00000062 00                 
+    25 00000063 256400                      in_format      db "%d",0
+    26 00000066 0A00                        new_line       db 10,0
+    27 00000068 25642000                    out_format     db "%d ",0
+    28 0000006C 456E7465722074776F-         in_mes_2d      db "Enter two array sizes(rows,cols) in format 0 0",10,0
+    29 00000075 206172726179207369-
+    30 0000007E 7A657328726F77732C-
+    31 00000087 636F6C732920696E20-
+    32 00000090 666F726D6174203020-
+    33 00000099 300A00             
+    34 0000009C 256420256400                in_2d_format   db "%d %d",0
+    35                                  section .bss
+    36 00000000 <res 00000050>              array          resd SIZE 
+    37 00000050 <res 00000004>              array_size     resd 1
+    38 00000054 <res 00000004>              temp_var       resd 1
+    39 00000058 <res 00000008>              array_2d_size resd 2
+    40                                  section .text 
+    41                                  
+    42                                  read_array:
+    43 00000000 68[00000000]            push in_mes_size
+    44 00000005 E8(00000000)            call printf
+    45 0000000A 83C404                  add esp,4
+    46 0000000D 68[50000000]            push array_size
+    47 00000012 68[63000000]            push in_format
+    48 00000017 E8(00000000)            call scanf
+    49 0000001C 83C408                  add esp,8
+    50                                  CHECK_INPUT_VALID_INTEGER 1
+    51 0000001F 83F801              <1>  cmp eax,%1
+    52 00000022 0F8590000000        <1>  jne invalid_integer_input
+    53                                  
+    54                                  parse_array_no_inp_mes:
+    55 00000028 A1[50000000]            mov eax, [array_size]
+    56 0000002D 83F800                  cmp eax, 0
+    57 00000030 7E72                    jle invalid_array_size
+    58 00000032 83F814                  cmp eax, SIZE
+    59 00000035 7F6D                    jg  invalid_array_size
+    60 00000037 8B35[50000000]          mov esi, [array_size]
+    61 0000003D BF[00000000]            mov edi, array
+    62 00000042 68[50000000]            push in_mes_digit
+    63                                  
+    64                                  parse_next_int:
+    65 00000047 E8(00000000)            call printf
+    66 0000004C 68[54000000]            push temp_var
+    67 00000051 68[63000000]            push in_format
+    68 00000056 E8(00000000)            call scanf
+    69 0000005B 83C408                  add esp,8
+    70 0000005E A1[54000000]            mov eax, [temp_var]
+    71 00000063 8907                    mov [edi], eax
+    72 00000065 83C704                  add edi, 4
+    73 00000068 4E                      dec esi
+    74 00000069 75DC                    jnz parse_next_int
+    75                                  
+    76                                  finalize:
+    77 0000006B 83C404                  add esp,4
+    78 0000006E C3                      ret
+    79                                  
+    80                                  print_array:
+    81 0000006F 8B35[50000000]              mov esi, [array_size]
+    82 00000075 BF[00000000]                mov edi, array
+    83 0000007A 83EC04                      sub esp,4
+    84 0000007D 68[68000000]                push out_format
+    85                                      write_next_int:
+    86 00000082 8B07                        mov eax, [edi]
+    87 00000084 89442404                    mov [esp+4], eax
+    88 00000088 E8(00000000)                call printf
+    89 0000008D 83C704                      add edi,4
+    90 00000090 4E                          dec esi
+    91 00000091 75EF                        jnz write_next_int
+    92 00000093 83C408                      add esp,8
+    93 00000096 68[66000000]                push new_line
+    94 0000009B E8(00000000)                call printf
+    95 000000A0 83C404                      add esp,4
+    96                                  
+    97 000000A3 C3                          ret
+    98                                  
+    99                                  
+   100                                  invalid_array_size:
+   101 000000A4 68[23000000]            push size_error_mes
+   102 000000A9 E8(00000000)            call printf
+   103 000000AE 83C404                  add esp,4
+   104 000000B1 B801000000              mov eax,1
+   105 000000B6 CD80                    int 80h
+   106                                  
+   107                                  invalid_integer_input:
+   108 000000B8 68[37000000]            push parse_error
+   109 000000BD E8(00000000)            call printf
+   110 000000C2 83C404                  add esp,4
+   111 000000C5 B801000000              mov eax,1
+   112 000000CA CD80                    int 80h
+   113                                  
+   114                                  read_2d_array:
+   115 000000CC 68[6C000000]                push in_mes_2d
+   116 000000D1 E8(00000000)                call printf
+   117 000000D6 83C404                      add esp,4
+   118 000000D9 68[5C000000]                push array_2d_size + 4
+   119 000000DE 68[58000000]                push array_2d_size
+   120 000000E3 68[9C000000]                push in_2d_format
+   121 000000E8 E8(00000000)                call scanf
+   122 000000ED 83C40C                      add esp,12
+   123                                      CHECK_INPUT_VALID_INTEGER 2
+   124 000000F0 83F802              <1>  cmp eax,%1
+   125 000000F3 75C3                <1>  jne invalid_integer_input
+   126 000000F5 A1[5C000000]                mov eax, [array_2d_size + 4]
+   127 000000FA 8B1D[58000000]              mov ebx, [array_2d_size]
+   128                                  
+   129 00000100 F7EB                        imul ebx
+   130 00000102 A3[50000000]                mov [array_size], eax
+   131 00000107 E91CFFFFFF                  jmp parse_array_no_inp_mes

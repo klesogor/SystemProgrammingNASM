@@ -1,0 +1,80 @@
+     1                                  %macro CHECK_INPUT_VALID_INTEGER 0%
+     2                                      cmp eax,1
+     3                                      jne invalid_integer_input
+     4                                  %endmacro
+     5                                  
+     6                                  extern  print_array, array, read_2d_array, array_size, array_2d_size, invalid_integer_input, printf, scanf
+     7                                  global main
+     8                                  
+     9                                  section .data
+    10 00000000 546869732070726F67-         mes             db "This programm finds all matches of number in 2d array",10,0
+    11 00000009 72616D6D2066696E64-
+    12 00000012 7320616C6C206D6174-
+    13 0000001B 63686573206F66206E-
+    14 00000024 756D62657220696E20-
+    15 0000002D 32642061727261790A-
+    16 00000036 00                 
+    17 00000037 456E7465722061206E-         inp_mes         db "Enter a number to look for:",10,0
+    18 00000040 756D62657220746F20-
+    19 00000049 6C6F6F6B20666F723A-
+    20 00000052 0A00               
+    21 00000054 4869742120526F773A-         match_format    db "Hit! Row: %d, Col: %d",10 ,0
+    22 0000005D 2025642C20436F6C3A-
+    23 00000066 2025640A00         
+    24 0000006B 2564                        inp_format      db "%d"
+    25                                  section .bss
+    26 00000000 <res 00000004>              temp_val resd 1
+    27                                  section .text
+    28                                  main:
+    29                                      ;read array
+    30 00000000 68[00000000]                push mes
+    31 00000005 E8(00000000)                call printf
+    32 0000000A 83C404                      add esp,4
+    33                                  
+    34 0000000D E8(00000000)                call read_2d_array
+    35                                      ;get match input
+    36 00000012 68[37000000]                push inp_mes
+    37 00000017 E8(00000000)                call printf
+    38 0000001C 83C404                      add esp,4
+    39                                  
+    40 0000001F 68[00000000]                push temp_val
+    41 00000024 68[6B000000]                push inp_format
+    42 00000029 E8(00000000)                call scanf
+    43                                      CHECK_INPUT_VALID_INTEGER
+    44 0000002E 83F801              <1>  cmp eax,1
+    45 00000031 0F85(00000000)      <1>  jne invalid_integer_input
+    46 00000037 83C408                      add esp,8
+    47                                  
+    48                                      ;move row length to register
+    49 0000003A 8B1D[04000000]              mov ebx,[array_2d_size + 4]
+    50                                      ;start calculations. remember to keep edx clean
+    51 00000040 BF[00000000]                mov edi, array
+    52 00000045 8B35[00000000]              mov esi, [array_size]
+    53                                      process_element:
+    54                                      ;get value and compare
+    55 0000004B 8B0F                        mov ecx, [edi]
+    56 0000004D 3B0D[00000000]              cmp ecx, [temp_val]
+    57 00000053 751A                        jne check_index
+    58                                      ;clear edx
+    59                                      
+    60 00000055 A1[00000000]                mov eax,[array_size]
+    61                                      ;invert esi, now it points to beginning
+    62 0000005A 29F0                        sub eax, esi
+    63                                      ;divide current index 
+    64 0000005C 31D2                        xor edx,edx
+    65 0000005E F7F3                        div ebx
+    66                                      ;push col
+    67 00000060 52                          push edx
+    68                                      ;push row
+    69 00000061 50                          push eax
+    70 00000062 68[54000000]                push match_format
+    71                                      ;print
+    72 00000067 E8(00000000)                call printf
+    73 0000006C 83C40C                      add esp,12
+    74                                  
+    75                                      check_index:
+    76 0000006F 83C704                      add edi, 4
+    77 00000072 4E                          dec esi
+    78 00000073 75D6                        jnz process_element
+    79                                  
+    80 00000075 C3                          ret

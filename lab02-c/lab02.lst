@@ -1,0 +1,119 @@
+     1                                  %define error jne log_error
+     2                                  ; for some reason commands without args is implemented like fcommand TO st1 and then pushes st1 down
+     3                                  section .data
+     4 00000000 726573756C74203D20-             out_mes   db "result = %.3f",10,0
+     5 00000009 252E33660A00       
+     6 0000000F 456E74657220696E74-             in_mes    db "Enter integer to calculate function:",10,0
+     7 00000018 6567657220746F2063-
+     8 00000021 616C63756C61746520-
+     9 0000002A 66756E6374696F6E3A-
+    10 00000033 0A00               
+    11 00000035 496E70757420706172-             error_mes db "Input parsing error",10,0
+    12 0000003E 73696E67206572726F-
+    13 00000047 720A00             
+    14 0000004A 256400                          in_format db "%d",0
+    15                                  section .bss
+    16 00000000 <res 00000004>              in_val    resd 1
+    17 00000004 <res 00000004>              temp_val  resd 1
+    18 00000008 <res 00000008>              out_val   resd 2; res 4*2=8 byte for float output
+    19                                  section .text
+    20                                  extern printf, scanf
+    21                                  global main
+    22                                  main:
+    23 00000000 68[0F000000]                push in_mes
+    24 00000005 E8(00000000)                call printf
+    25 0000000A 83C404                      add esp, 4
+    26 0000000D 68[00000000]                push in_val
+    27 00000012 68[4A000000]                push in_format
+    28 00000017 E8(00000000)                call scanf
+    29 0000001C 83C408                      add esp,8; in_val now contains integer
+    30 0000001F 83F801                      cmp eax, 1
+    31 00000022 0F85E5000000                error
+    32 00000028 A1[00000000]                mov eax, [in_val]
+    33 0000002D 83F801                      cmp eax, 1
+    34 00000030 7E07                        jle first_case
+    35 00000032 83F814                      cmp eax, 20
+    36 00000035 7E09                        jle second_case
+    37 00000037 EB0E                        jmp third_case
+    38                                  
+    39                                      first_case:
+    40 00000039 E830000000                  call calc_le_one
+    41 0000003E EB0E                        jmp fin
+    42                                      second_case:
+    43 00000040 E86A000000                  call calc_le_twenty
+    44 00000045 EB07                        jmp fin
+    45                                      third_case:
+    46 00000047 E896000000                  call calc_gt_twenty
+    47 0000004C EB00                        jmp fin
+    48                                  
+    49                                      fin: 
+    50 0000004E FF35[0C000000]              push dword [out_val + 4]
+    51 00000054 FF35[08000000]              push dword [out_val]
+    52 0000005A 68[00000000]                push out_mes
+    53 0000005F E8(00000000)                call printf
+    54 00000064 83C40C                      add esp,12
+    55 00000067 B801000000                  mov eax, 0x1
+    56 0000006C CD80                        int 80h
+    57                                      
+    58                                  calc_le_one:
+    59 0000006E DB05[00000000]              fild dword [in_val]
+    60 00000074 DB05[00000000]              fild dword [in_val]
+    61 0000007A DEC9                        fmulp;x^2
+    62                                  
+    63 0000007C C705[04000000]4B00-         mov  dword [temp_val], 75
+    64 00000084 0000               
+    65 00000086 DB05[04000000]              fild dword [temp_val]
+    66 0000008C DEC9                        fmulp ;75x^2
+    67                                  
+    68 0000008E DB05[00000000]              fild dword [in_val]
+    69 00000094 C705[04000000]1100-         mov  dword [temp_val], 17
+    70 0000009C 0000               
+    71 0000009E DB05[04000000]              fild dword [temp_val]
+    72 000000A4 DEC9                        fmulp;17x
+    73                                  
+    74 000000A6 DEE9                        fsubp; 54x^2 - 17x
+    75                                  
+    76 000000A8 DD1D[08000000]              fstp qword [out_val]
+    77 000000AE C3                          ret
+    78                                  
+    79                                  calc_le_twenty:
+    80 000000AF DB05[00000000]              fild dword [in_val]
+    81 000000B5 DB05[00000000]              fild dword [in_val]
+    82 000000BB DEC9                        fmulp; x^2
+    83                                  
+    84 000000BD DB05[00000000]              fild dword [in_val]
+    85 000000C3 D9E8                        fld1
+    86 000000C5 DEC1                        faddp; x+1
+    87                                  
+    88 000000C7 DEF9                        fdivp; x^2/(x+1)
+    89                                  
+    90 000000C9 C705[04000000]3600-         mov  dword [temp_val], 54
+    91 000000D1 0000               
+    92 000000D3 DB05[04000000]              fild dword [temp_val]
+    93 000000D9 DEC1                        faddp; 54+(x^2/(x+1))
+    94                                  
+    95 000000DB DD1D[08000000]              fstp qword [out_val]
+    96 000000E1 C3                          ret
+    97                                  
+    98                                  calc_gt_twenty:
+    99 000000E2 C705[04000000]5500-         mov  dword [temp_val], 85
+   100 000000EA 0000               
+   101 000000EC DB05[04000000]              fild dword [temp_val]
+   102 000000F2 DB05[00000000]              fild dword [in_val]
+   103 000000F8 DEC9                        fmulp; 85x
+   104                                  
+   105 000000FA D9E8                        fld1
+   106 000000FC DB05[00000000]              fild dword [in_val]
+   107 00000102 DEC1                        faddp; x+1
+   108                                  
+   109 00000104 DEF9                        fdivp; 85x/(1+x)
+   110                                  
+   111 00000106 DD1D[08000000]              fstp qword [out_val]
+   112 0000010C C3                          ret
+   113                                  
+   114                                  log_error:
+   115 0000010D 68[35000000]                push error_mes
+   116 00000112 E8(00000000)                call printf
+   117 00000117 B801000000                  mov eax, 0x1
+   118 0000011C BB01000000                  mov ebx, 0x1
+   119 00000121 CD80                        int 0x80

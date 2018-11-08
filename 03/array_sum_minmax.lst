@@ -1,0 +1,70 @@
+     1                                  
+     2                                  %macro CHECK_OVERFLOW_SUM 0
+     3                                      jo inform_overflow
+     4                                  %endmacro
+     5                                  global main
+     6                                  extern printf,read_array,array,array_size
+     7                                  section .data
+     8 00000000 546869732070726F67-         mes db "This programm calculates sum of the array and finds max and min element",10,0
+     9 00000009 72616D6D2063616C63-
+    10 00000012 756C61746573207375-
+    11 0000001B 6D206F662074686520-
+    12 00000024 617272617920616E64-
+    13 0000002D 2066696E6473206D61-
+    14 00000036 7820616E64206D696E-
+    15 0000003F 20656C656D656E740A-
+    16 00000048 00                 
+    17 00000049 4F766572666C6F7720-         overflow db "Overflow occured during sum calculation",10,0
+    18 00000052 6F6363757265642064-
+    19 0000005B 7572696E672073756D-
+    20 00000064 2063616C63756C6174-
+    21 0000006D 696F6E0A00         
+    22 00000072 73756D3A2025642C20-         fin_format db "sum: %d, min: %d, max:%d",10,0
+    23 0000007B 6D696E3A2025642C20-
+    24 00000084 6D61783A25640A00   
+    25                                  section .text
+    26                                  
+    27                                  main:
+    28 00000000 68[00000000]                push mes
+    29 00000005 E8(00000000)                call printf
+    30 0000000A 83C404                      add esp,4
+    31 0000000D E8(00000000)                call read_array
+    32 00000012 BF[00000000]                mov edi, array
+    33 00000017 8B35[00000000]              mov esi, [array_size]
+    34                                      ;clear registers
+    35 0000001D 31DB                        xor ebx,ebx
+    36 0000001F 31C9                        xor ecx,ecx
+    37 00000021 31D2                        xor edx,edx
+    38                                  
+    39                                      process_array:;bx - sum, cx - min; dx - max
+    40 00000023 8B07                        mov eax,[edi]
+    41 00000025 01C3                        add ebx,eax
+    42                                      CHECK_OVERFLOW_SUM
+    43 00000027 7023                <1>  jo inform_overflow
+    44 00000029 39C8                        cmp eax, ecx
+    45 0000002B 7D02                        jge check_greater
+    46                                      ;swap
+    47 0000002D 89C1                        mov ecx,eax
+    48                                      check_greater:
+    49 0000002F 39D0                        cmp eax, edx
+    50 00000031 7E02                        jle check_index
+    51 00000033 89C2                        mov edx, eax
+    52                                      check_index:
+    53 00000035 83C704                      add edi, 4;next element
+    54 00000038 4E                          dec esi
+    55 00000039 75E8                        jnz process_array
+    56                                  
+    57 0000003B 52                          push edx
+    58 0000003C 51                          push ecx
+    59 0000003D 53                          push ebx
+    60 0000003E 68[72000000]                push fin_format
+    61 00000043 E8(00000000)                call printf
+    62 00000048 83C410                      add esp, 16
+    63 0000004B C3                          ret
+    64                                  
+    65                                      inform_overflow:
+    66 0000004C 68[49000000]                push overflow
+    67 00000051 E8(00000000)                call printf
+    68 00000056 83C404                      add esp,4
+    69 00000059 B801000000                  mov eax,1
+    70 0000005E CD80                        int 80h
